@@ -4,15 +4,7 @@ This package provides a React application (bootstrapped with Create React App) t
 
 ## Prerequisites
 
-1. Install Node.js 20 or later.
-2. Install pnpm, npm, or yarn (examples below use `pnpm`).
-3. Copy the backend environment template and fill in your credentials:
-
-   ```bash
-   cp ../.env.example ../.env
-   ```
-
-4. Run the LangGraph backend locally:
+1. Firstly, run the LangGraph backend locally:
 
    ```bash
    uv run langgraph dev
@@ -23,18 +15,13 @@ This package provides a React application (bootstrapped with Create React App) t
    > [!TIP]
    > You do not need to edit `langgraph.json`; the default entry already points to the WhatsEat graph.
 
-5. Copy the frontend environment template:
-
-   ```bash
-   cp .env.example .env
-   ```
+2. Secondly, set `.env` file for the React app:
 
    Adjust the values to point to your LangGraph deployment. When using LangGraph Cloud, provide `REACT_APP_LANGGRAPH_API_KEY` and set `REACT_APP_LANGGRAPH_API_URL` to the Cloud endpoint.
 
 ## Installation
 
 ```bash
-cd frontend
 pnpm install
 ```
 

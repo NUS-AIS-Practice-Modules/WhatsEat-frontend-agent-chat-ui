@@ -10,7 +10,7 @@ interface RecommendationGridProps {
   disableRequestMore?: boolean;
 }
 
-// 详情页组件
+// Details component
 function RestaurantDetails({
   card,
   onBack,
@@ -63,8 +63,10 @@ function RestaurantDetails({
     setActiveIndex(index);
   };
 
+  const googleMapsApiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
+
   const handleToggleMap = () => {
-    if (!userLocation || !card.address) {
+    if (!userLocation || !card.address || !googleMapsApiKey) {
       return;
     }
     if (!showMap) {
@@ -78,35 +80,27 @@ function RestaurantDetails({
 
   const currentPhoto = photos.length > 0 ? photos[activeIndex] ?? photos[0] : null;
   const hasMultiple = photos.length > 1;
-  const hasMap = Boolean(userLocation && card.address);
-  const sanitizedAddress = card.address?.replace(/"/g, '\\"');
+  const userLatitude = userLocation?.latitude;
+  const userLongitude = userLocation?.longitude;
+  const hasMap = Boolean(userLocation && card.address && googleMapsApiKey);
+  const mapSrcDoc = useMemo(() => {
+    if (
+      userLatitude == null ||
+      userLongitude == null ||
+      !card.address ||
+      !googleMapsApiKey
+    ) {
+      return null;
+    }
 
-  return (
-    <div className="flex w-full justify-center px-2 sm:px-4 perspective-1200">
-      <div
-        className={clsx(
-          "w-full max-w-3xl origin-left",
-          animateIn && "animate-restaurant-flip",
-        )}
-      >
-        <div className="mx-auto flex max-h-[78vh] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
-          {/* 顶部导航栏 */}
-          <div className="flex flex-none items-center justify-between bg-orange-600 px-5 py-3">
-            <h2 className="text-left text-white text-base font-semibold lg:text-lg">{card.name}</h2>
-            <button
-              onClick={onBack}
-              className="rounded bg-orange-700 px-3 py-1 text-xs text-white transition-colors hover:bg-orange-800"
-            >
-              ← 返回列表
-            </button>
-          </div>
+    const originLiteral = JSON.stringify({
+      lat: userLatitude,
+      lng: userLongitude,
+    });
+    const destinationLiteral = JSON.stringify(card.address ?? "");
+    const apiKeyParam = encodeURIComponent(googleMapsApiKey);
 
-          <div className="flex-1 overflow-y-auto px-5 pb-5 pt-4">
-            {/* 图片轮播/地图区域 */}
-            {showMap && hasMap ? (
-              <div className="relative mb-5 h-60 w-full overflow-hidden rounded-lg bg-white lg:h-64">
-                <iframe
-                  srcDoc={`<!DOCTYPE html>
+    return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
@@ -119,8 +113,8 @@ function RestaurantDetails({
 <body>
 <div id="map"></div>
 <script>
-  const ORIGIN = { lat: ${userLocation?.latitude}, lng: ${userLocation?.longitude} };
-  const DEST_ADDR = "${sanitizedAddress ?? ""}";
+  const ORIGIN = ${originLiteral};
+  const DEST_ADDR = ${destinationLiteral};
 
   let map, dirSvc, dirRenderer;
   function initMap() {
@@ -144,9 +138,37 @@ function RestaurantDetails({
   }
   window.initMap = initMap;
 </script>
-<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB5yMwQo7k6ilAjWviqhVph_UrGKQMXL6Q&callback=initMap"></script>
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=${apiKeyParam}&callback=initMap"></script>
 </body>
-</html>`}
+</html>`;
+  }, [card.address, googleMapsApiKey, userLatitude, userLongitude]);
+
+  return (
+    <div className="flex w-full justify-center px-2 sm:px-4 perspective-1200">
+      <div
+        className={clsx(
+          "w-full max-w-3xl origin-left",
+          animateIn && "animate-restaurant-flip",
+        )}
+      >
+        <div className="mx-auto flex max-h-[78vh] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+          {/* Top navigation bar */}
+          <div className="flex flex-none items-center justify-between bg-orange-600 px-5 py-3">
+            <h2 className="text-left text-white text-base font-semibold lg:text-lg">{card.name}</h2>
+            <button
+              onClick={onBack}
+              className="rounded bg-orange-700 px-3 py-1 text-xs text-white transition-colors hover:bg-orange-800"
+            >
+              ← Back to list
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-5 pb-5 pt-4">
+            {/* Gallery / Map area */}
+            {showMap && hasMap ? (
+              <div className="relative mb-5 h-60 w-full overflow-hidden rounded-lg bg-white lg:h-64">
+                <iframe
+                  srcDoc={mapSrcDoc ?? undefined}
                   className="h-full w-full border-0"
                   title="Navigation Map"
                 />
@@ -167,7 +189,7 @@ function RestaurantDetails({
               <div className="relative mb-5 h-60 w-full overflow-hidden rounded-lg lg:h-64">
                 <img
                   src={currentPhoto}
-                  alt={`${card.name} 图片 ${activeIndex + 1}`}
+                  alt={`${card.name} image ${activeIndex + 1}`}
                   loading="lazy"
                   className="h-full w-full object-cover"
                 />
@@ -175,7 +197,7 @@ function RestaurantDetails({
                   <>
                     <button
                       type="button"
-                      aria-label="上一张图片"
+                      aria-label="Previous photo"
                       onClick={showPrevious}
                       className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-black/50 px-3 py-2 text-white text-2xl transition hover:bg-black/70"
                     >
@@ -183,7 +205,7 @@ function RestaurantDetails({
                     </button>
                     <button
                       type="button"
-                      aria-label="下一张图片"
+                      aria-label="Next photo"
                       onClick={showNext}
                       className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-black/50 px-3 py-2 text-white text-2xl transition hover:bg-black/70"
                     >
@@ -194,7 +216,7 @@ function RestaurantDetails({
                         <button
                           key={`photo-dot-${index}`}
                           type="button"
-                          aria-label={`显示图片 ${index + 1}`}
+                          aria-label={`Show photo ${index + 1}`}
                           onClick={() => handleSelect(index)}
                           className={
                             "h-3 w-3 rounded-full border-2 border-white transition " +
@@ -220,13 +242,13 @@ function RestaurantDetails({
               </div>
             ) : (
               <div className="mb-5 flex h-60 w-full items-center justify-center rounded-lg bg-slate-100 text-slate-500 lg:h-64">
-                暂无图片
+                No photos
               </div>
             )}
 
-            {/* 详细信息区域 */}
+            {/* Details section */}
             <div className="space-y-5 text-left">
-              {/* 基本信息 */}
+              {/* Basic info */}
               <div className="flex items-start justify-between border-b pb-3">
                 <div className="flex-1">
                   <span className="text-sm uppercase tracking-wide text-slate-500">{typeLabel}</span>
@@ -243,43 +265,43 @@ function RestaurantDetails({
                 </div>
               </div>
 
-              {/* 摘要 */}
+              {/* Summary */}
               {card.summary && (
                 <div className="rounded-lg bg-slate-50 p-3">
                   <p className="leading-relaxed text-slate-700">{card.summary}</p>
                 </div>
               )}
 
-              {/* 详细信息网格 */}
+              {/* Details grid */}
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {ratingText && (
                   <div className="rounded-lg border border-slate-200 bg-white p-3">
-                    <dt className="mb-1 text-xs uppercase tracking-wide text-slate-500">⭐ 评分</dt>
+                    <dt className="mb-1 text-xs uppercase tracking-wide text-slate-500">⭐ Rating</dt>
                     <dd className="text-base font-semibold text-slate-900">{ratingText}</dd>
                   </div>
                 )}
                 <div className="rounded-lg border border-slate-200 bg-white p-3">
-                  <dt className="mb-1 text-xs uppercase tracking-wide text-slate-500">💰 价格</dt>
+                  <dt className="mb-1 text-xs uppercase tracking-wide text-slate-500">💰 Price</dt>
                   <dd className="text-base font-semibold text-slate-900">{priceLabel}</dd>
                 </div>
                 {distance && (
                   <div className="rounded-lg border border-slate-200 bg-white p-3">
-                    <dt className="mb-1 text-xs uppercase tracking-wide text-slate-500">📏 距离</dt>
+                    <dt className="mb-1 text-xs uppercase tracking-wide text-slate-500">📏 Distance</dt>
                     <dd className="text-base font-semibold text-slate-900">{distance}</dd>
                   </div>
                 )}
                 {openStatus && (
                   <div className="rounded-lg border border-slate-200 bg-white p-3">
-                    <dt className="mb-1 text-xs uppercase tracking-wide text-slate-500">🕒 营业状态</dt>
+                    <dt className="mb-1 text-xs uppercase tracking-wide text-slate-500">🕒 Open status</dt>
                     <dd className="text-base font-semibold text-slate-900">{openStatus}</dd>
                   </div>
                 )}
               </div>
 
-              {/* 类型标签 */}
+              {/* Type tags */}
               {typeList.length > 0 && (
                 <div>
-                  <p className="mb-2 text-sm uppercase tracking-wide text-slate-500">餐厅类型</p>
+                  <p className="mb-2 text-sm uppercase tracking-wide text-slate-500">Restaurant types</p>
                   <div className="flex flex-wrap gap-1.5">
                     {typeList.map((type, index) => (
                       <span
@@ -293,10 +315,10 @@ function RestaurantDetails({
                 </div>
               )}
 
-              {/* 标签 */}
+              {/* Tags */}
               {card.tags && card.tags.length > 0 && (
                 <div>
-                  <p className="mb-2 text-sm uppercase tracking-wide text-slate-500">特色标签</p>
+                  <p className="mb-2 text-sm uppercase tracking-wide text-slate-500">Feature tags</p>
                   <div className="flex flex-wrap gap-1.5">
                     {card.tags.map((tag) => (
                       <span
@@ -310,7 +332,7 @@ function RestaurantDetails({
                 </div>
               )}
 
-              {/* 推荐理由 */}
+              {/* Reasons for recommendation */}
               {card.why && card.why.length > 0 && (
                 <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
                   <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-orange-800">
@@ -327,7 +349,7 @@ function RestaurantDetails({
                 </div>
               )}
 
-              {/* 操作按钮 */}
+              {/* Action buttons */}
               <div className="flex flex-col gap-3 pt-4 sm:flex-row">
                 {card.deeplink && (
                   <a
@@ -336,7 +358,7 @@ function RestaurantDetails({
                     rel="noreferrer"
                     className="flex-1 rounded-lg bg-orange-600 px-5 py-2.5 text-center text-sm font-medium text-white transition-colors hover:bg-orange-700"
                   >
-                    📍 获取路线
+                    📍 Get Directions
                   </a>
                 )}
                 {!card.deeplink && card.google_maps_uri && (
@@ -346,14 +368,14 @@ function RestaurantDetails({
                     rel="noreferrer"
                     className="flex-1 rounded-lg bg-orange-600 px-5 py-2.5 text-center text-sm font-medium text-white transition-colors hover:bg-orange-700"
                   >
-                    📍 在 Google Maps 上查看
+                    📍 View on Google Maps
                   </a>
                 )}
                 <button
                   onClick={onBack}
                   className="flex-1 rounded-lg border-2 border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
                 >
-                  返回列表
+                  Return to list
                 </button>
               </div>
             </div>
@@ -689,12 +711,11 @@ export function RecommendationGrid({ payload, userLocation, onRequestMore, disab
     handleScroll();
   }, [handleScroll, payload.cards]);
 
-  // 查找选中的餐厅
+  // Find the selected restaurant
   const selectedCard = selectedPlaceId
     ? payload.cards.find((card) => card.place_id === selectedPlaceId)
     : null;
 
-  // 如果选中了餐厅，显示详情页
   if (selectedCard) {
     return <RestaurantDetails card={selectedCard} onBack={() => setSelectedPlaceId(null)} userLocation={userLocation} />;
   }
