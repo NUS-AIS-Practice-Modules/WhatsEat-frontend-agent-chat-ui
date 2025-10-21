@@ -15,11 +15,7 @@ This package provides a React application (bootstrapped with Create React App) t
    > [!TIP]
    > You do not need to edit `langgraph.json`; the default entry already points to the WhatsEat graph.
 
-2. Secondly, copy the frontend environment template:
-
-   ```bash
-   cp .env.example .env
-   ```
+2. Secondly, set `.env` file for the React app:
 
    Adjust the values to point to your LangGraph deployment. When using LangGraph Cloud, provide `REACT_APP_LANGGRAPH_API_KEY` and set `REACT_APP_LANGGRAPH_API_URL` to the Cloud endpoint.
 
